@@ -19,7 +19,7 @@
   </head>
   <body>
 <div class="row">
-<div class="col-lg-4"><h2>Timesheet</h2></div>
+<div class="col-lg-4"><h2><img style="margin-bottom:5px;margin-left:15px;" src="/static/images/logo.png" height="28px"/>.TIME</h2></div>
 <div class="col-lg-4">
 <div id="msgbox"></div>
 </div>
@@ -31,7 +31,6 @@
     <a href="/">
       <span class="badge pull-right hidden"></span>
       <span class="glyphicon glyphicon-cog"></span> Control Panel
-      <img  class="s-header__logo-img s-header__logo-img-shrink" src="/static/images/logo-dark.svg" height="28px" alt="Logo">
     </a>
   </li>
   

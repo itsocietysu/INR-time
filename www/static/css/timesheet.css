@@ -15,41 +15,6 @@ body {
 	background-color:#F5F5F5;
 }
 
-.s-header__logo {
-  position: relative;
-  z-index: 9999;
-  width: 100%;
-  height: auto;
-  float: left;
-}
-
-.s-header__logo-link {
-  display: inline-block;
-  padding: 0.7rem 0;
-}
-
-.s-header__logo-link:focus, .s-header__logo-link:hover {
-  text-decoration: none;
-}
-
-.s-header__logo-img-default, .s-header__logo-img-shrink {
-  display: block;
-  transition-duration: 300ms;
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.7, 1, 0.7, 1);
-}
-
-.s-header__logo-img-default {
-  opacity: 1;
-}
-
-.s-header__logo-img-shrink {
-  position: absolute;
-  top: 1rem;
-  left: 0;
-  opacity: 0;
-}
-
 .icon-car {
    background-image: url("../images/car.png");
    background-position: center center;
