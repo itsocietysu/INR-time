@@ -31,6 +31,7 @@
     <a href="/">
       <span class="badge pull-right hidden"></span>
       <span class="glyphicon glyphicon-cog"></span> Control Panel
+      <img  class="s-header__logo-img s-header__logo-img-shrink" src="/static/images/logo-dark.svg" height="28px" alt="Logo">
     </a>
   </li>
   

@@ -146,7 +146,7 @@ user.getname = function (id) {
     return "Error, data not available";
   for(i = 0; i < this._records.length; i++) {
     if(this._records[i]._id == id)
-      return this._records[i].name + " " + this._records[i].surname;
+      return this._records[i].name;
   }
   return "User not found";
 };
