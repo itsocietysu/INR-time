@@ -1,0 +1,223 @@
+<script type="text/javascript">
+var cur_user, validator;
+$(document).ready(function() {
+  loadUsersList("usersList");
+  $(".datepicker").datepicker({format: "yyyy-mm-dd", autoclose:true});
+  $(".rapidsearch").rapidsearch();
+  $("#btnreset").click(function() {
+    resetUsersForm();
+  });
+  $("#btnremove").click(function() {
+    loadUsersList("usersList");
+  });
+  $("#userForm").submit(function(event) {
+    event.preventDefault();
+    if(!validator.form())
+      return;
+    user.update(cur_user, "userForm",resetUsersForm);
+  });
+  user.me(nop);
+  validator = $("#userForm").validate({
+    rules: {
+      usernewsalary: {
+        required: function(element) {
+            if($("#userstart").val() == "")
+              return false;
+            else
+              return true;
+        },
+        number: true
+      },
+      userstart: {
+        required: function(element) {
+            if($("#usernewsalary").val() == "")
+              return false;
+            else
+              return true;
+        },
+        dateISO: true
+      },
+    },
+    highlight: function (element) {
+      $(element).closest('.form-group').addClass('has-error');
+    },
+    unhighlight: function (element) {
+      $(element).closest('.form-group').removeClass('has-error');
+    }
+  });
+});
+
+function loadUsersList(list) {
+  var filter = [{},{name:1,surname:1},{surname:1}];
+  user.load(filter, loadUsers, list);
+}
+
+function createFilterForm(container) {
+  var filter = [{},{},{name:1}];
+  $("#" + container + " input, #" + container + " select, #" + container + " textarea").each(function (){
+    var property = $(this).attr("id").substr(7);
+    if (property == "_id")
+      return;
+    filter[1][property] = 1;
+  });
+  filter[1].responsible = 1;
+  filter[1].employees = 1;
+  return filter;
+}
+
+function resetUsersForm()
+{
+  $("#userForm")[0].reset();
+  $("#user_id").val(0);
+  $("#username").text("");
+  $("#userhistory").html("");
+  $("#usersList li").removeClass("active");
+  $("#btnsubmit, #btnreset").addClass("hidden");
+}
+
+function loadUsers(data, args) {
+  var container = args[0];
+  var i;
+  var htmllist = "";
+  for(i=0;i < data.length; i++) {
+    htmllist += "<li id='" + data[i]._id + "'class='list-group-item'><span class='glyphicon glyphicon-user'></span> " + data[i].surname + " " + data[i].name + "</li>";
+  }
+  $("#" + container).html(htmllist);
+  $("#" + container + " .list-group-item").click(function() {
+    resetUsersForm();
+    $(this).addClass("active");
+    var filter = [{},{name:1, surname:1, salary:1, group:1, status:1, contract:1},{surname:1}];
+    filter[0]._id = this.id;
+    user.loadSingle(filter,loadUserDetails);
+  });
+}
+
+function loadUserDetails(data) {
+  cur_user = data[0];
+  $("#username").text(cur_user.name + " " + cur_user.surname);
+  $("#usergroup").val(cur_user.group);
+  $("#userstatus").val(cur_user.status);
+  $("#usercontract").val(cur_user.contract);
+  $("#userhistory").html(generateSalary(cur_user.salary));
+  addDeleteSalaryEvent();
+  $("#btnsubmit, #btnreset").removeClass("hidden");
+}
+
+function addDeleteSalaryEvent() {
+  $("#userhistory li span:last-child").click(function () {
+    var index = $(this).parent().index();
+    if (cur_user.salary.length != 1) {
+      if(index == 0) {
+        cur_user.salary[index + 1].from = cur_user.salary[index].to;
+      } else {
+        cur_user.salary[index - 1].to = cur_user.salary[index].to;
+      }
+    }
+    cur_user.salary.splice(index,1);
+    $("#userhistory").html(generateSalary(cur_user.salary));
+    addDeleteSalaryEvent();
+  });
+}
+
+function generateSalary(salary) {
+  var i, htmllist = "";
+  if(salary) {
+    for(i = 0; i < salary.length; i ++) {
+      htmllist += "<li class='list-group-item' id='entry" + i + "'><b>" + salary[i].cost + " &euro;/h </b>  <span>" + salary[i].from + "</span> -- <span>";
+      if(salary[i].to == "2099-12-31")
+        htmllist += "Now";
+      else
+        htmllist += salary[i].to;
+      htmllist += "</span><span class='glyphicon glyphicon-trash'></span></li>"
+    }
+  }
+  return htmllist;
+}
+</script>
+<h2>Users Management</h2>
+<div class="row">
+  <div class="col-lg-3">
+    <h3>Users list</h3>
+    <div class="input-group">
+      <span class="input-group-addon glyphicon glyphicon-search"></span>
+      <input type="text" class="form-control rapidsearch" placeholder="Rapid Search" id="txtusers">
+    </div>
+    <p></p>
+    <ul class="list-group" id="usersList">
+  </div>
+  <div class="col-lg-5">
+    <h3>User Details</h3>
+    <form class="form-horizontal" role="form" id="userForm" method="post" action="/index/users">
+<input type="hidden" id="user_id" value="0">
+<div class="form-group">
+  <label for="username" class="col-lg-4 control-label">Name</label>
+  <div class="col-lg-6">
+    <p id="username" class="form-control-static"></p>
+  </div>
+</div>
+<div class="form-group">
+  <label for="usergroup" class="col-lg-4 control-label">Group</label>
+  <div class="col-lg-6">
+    <select class="form-control" id="usergroup">
+      <option value=""></option>
+      <option value="employee">Employee</option>
+      <option value="administrator">Administrator</option>
+      <option value="project manager">Project Manager</option>
+      <option value="account">Account</option>
+    </select>
+  </div>
+</div>
+<div class="form-group">
+  <label for="userstatus" class="col-lg-4 control-label">Status</label>
+  <div class="col-lg-6">
+    <select class="form-control" id="userstatus">
+      <option value="active">Active</option>
+      <option value="disable">Disable</option>
+    </select>
+  </div>
+</div>
+<div class="form-group">
+  <label for="usercontract" class="col-lg-4 control-label">Contract</label>
+  <div class="col-lg-6">
+    <select class="form-control" id="usercontract">
+      <option value="oe">Open-ended contract</option>
+      <option value="ft">Fixed-term contract</option>
+      <option value="st">Stage</option>
+      <option value="co">Co.co.pro</option>
+    </select>
+  </div>
+</div>
+<div class="form-group">
+  <label for="userhistory" class="col-lg-4 control-label">History</label>
+  <div class="col-lg-6">
+<ul class="list-group" id="userhistory">
+</ul>
+  </div>
+</div>
+<div class="form-group">
+  <label for="usernewsalary" class="col-lg-4 control-label">New hour cost</label>
+  <div class="col-lg-6">
+    <div class="input-group">
+      <input type="text" class="form-control" id="usernewsalary" name="usernewsalary" placeholder="20">
+      <span class="input-group-addon">&#8381;/h</span>
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="userstart" class="col-lg-4 control-label">From date</label>
+  <div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-addon glyphicon glyphicon-calendar"></span>
+      <input type="text" class="form-control datepicker" id="userstart" name="userstart" placeholder="2012-03-01">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+    <div class="col-lg-offset-4 col-lg-7">
+      <button type="submit" class="btn btn-primary hidden" id="btnsubmit"><span class="glyphicon glyphicon-edit"></span> Update</button>
+      <button type="reset" class="btn hidden" id="btnreset"> Reset</button>
+    </div>
+</div>
+    </form>
+  </div>
+</div>

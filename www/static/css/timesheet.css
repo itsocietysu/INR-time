@@ -1,0 +1,188 @@
+body {
+  background: url("../images/body_pattern.png") repeat scroll 0 0 #FFFFFF;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#custlist {
+	padding:0px;
+}
+#custlist li {
+	list-style-type:none;
+}
+.list-group-item:hover {
+	background-color:#F5F5F5;
+}
+
+.icon-car {
+   background-image: url("../images/car.png");
+   background-position: center center;
+   display: inline-block;
+   height: 26px;
+   width: 26px;
+}
+
+.icon-airplane {
+   background-image: url("../images/airplane.png");
+   background-position: center center;
+   display: inline-block;
+   height: 26px;
+   width: 26px;
+}
+
+.icon-hotel {
+   background-image: url("../images/hotel.png");
+   background-position: center center;
+   display: inline-block;
+   height: 26px;
+   width: 26px;
+}
+
+#hours-range {
+    margin-top: 10px;
+}
+
+form .error {
+    color: #B94A48;
+}
+
+#reportForm .btn-group .active {
+  z-index: 1;
+}
+
+#custList, #projectsList, #usersList {
+  height: 450px;
+  overflow: auto;
+}
+
+#usersList div.btn-group {
+  visibility:hidden;
+  float:right;
+}
+
+#usersList li.active div.btn-group {
+  visibility:visible;
+  float:right;
+}
+
+#offerfiles li span {
+  float: right;
+  cursor: pointer;
+}
+
+#userhistory li span:last-child {
+  float: right;
+  cursor: pointer;
+}
+
+.filename {
+  min-width: 235px;
+}
+.filename span {
+  cursor: pointer;
+}
+
+#pm h2 {
+  clear:both;
+}
+#tripreq .popover-content dt {
+  width:80px;
+}
+#tripreq  .popover-content .dl-horizontal dd {
+  margin-left:100px;
+}
+#tripreq  .popover-content dd div span {
+  margin-top:5px;
+  margin-right:5px;
+}
+#taglist {
+  padding:0px;
+  width:auto;
+}
+#taglist li {
+  border:1px solid #DDD;
+  background-color:#fff;
+  border-radius: 4px;
+  cursor:pointer;
+  display:block;
+  float:left;
+  list-style-type:none;
+  margin-left:5px;
+  margin-top:5px;
+  padding:5px;
+}
+#taglist li.active {
+  background-color: #428BCA;
+  color: #FFFFFF;
+}
+#taglist li input {
+  width:80px;
+}
+#pm h3 {
+  clear:both;
+}
+#expreq .details {
+  padding-top:10px;
+  clear:both;
+}
+#expreq p {
+  padding-top:10px;
+}
+#expreq span {
+  padding-top:5px;
+}
+#helplink div.popover {
+  max-width:800px;
+}
+#helplink div.popover dl {
+  width:700px;
+}
+.singlechart {
+  max-width:60%;
+}
+.totalchart {
+  max-width:30%;
+}
+.graphtable {
+  margin-top:20px;
+  margin-right:20px;
+  float:right;
+  max-width:35%;
+}
+
+button[type="reset"] {
+  background-color:#c2c2c2;
+}
+.panel-default > .panel-heading {
+  background-color:#c2c2c2;
+}
+
+.nav-pills hr {
+  border-color:#a2a2a2;
+}
+
+#eventpreview {
+  padding:2px 5px;
+  border-radius: 4px;
+  margin:0;
+}
+
+.fc-content {
+  background-color:#FFF;
+}
+
+.fc-event-inner a {
+  float:right;
+  margin-right:5px;
+}
+
+
+#hours.green {
+  color:white;
+  background-color: #49c349;
+}
+#hours.red {
+  color:white;
+  background-color:#dc2e2e;
+}

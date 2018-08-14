@@ -1,0 +1,126 @@
+<script type="text/javascript">
+var cur_trips, trip_id, cur_expences, cur_id, motivation;
+var labels = ["from","city","country","start","end","description","accommodation"];
+$(document).ready(function() {
+  user.me(userdata);
+  $("#btnreject").click(function() {
+    motivation = $("#note").val();
+    if($('#reject .modal-title:contains("trip")').length == 1) {
+      updateStatus("trip", cur_id, "reject", motivation);
+    } else {
+      updateStatus("expence", cur_id, "reject", motivation);
+    }
+    $("#note").val("");
+    $('#reject').modal('hide');
+  });
+});
+
+function userdata(data){
+  me = data;
+  if(me.group != "employee") {
+    var filter = [ { 'responsibles._id' : me._id }, { name: 1 }, { name: 1 } ];
+    project.load(filter, firststage);
+  }
+}
+
+function firststage() {
+  var filter = [ {}, {name:1, surname:1}, {surname:1}];
+  user.load(filter, secondstage);
+}
+
+function secondstage() {
+  var filter = {};
+  filter.projects_id = new Array();
+  for (var i = 0; i < project._records.length; i++) {
+    filter.projects_id.push(project._records[i]._id);
+  }
+  filter.status = 'toapprove';
+  approval.search(filter, loadapprovals);
+  $("#pm").removeClass("hidden");
+}
+
+function loadapprovals(data) {
+  generateExpencesList(data.expences, ["expreq", true]);
+  loadTrips(data.trips, "tripreq");
+}
+
+function loadTrips(data, container) {
+  var i,j;
+  var htmllist = "";
+  cur_trips = data;
+  for(i=0;i < data.length; i++) {
+      htmllist += "<li id='" + data[i]._id + "'class='list-group-item'><span class='glyphicon glyphicon-globe'></span> " + data[i].city + " " + data[i].start + " <button data-toggle='popover' type='button' class='btn btn-default btn-sm'><span class='glyphicon glyphicon-info-sign'></span>  Details</button> <button type='button' class='btn btn-success btn-sm'><span class='glyphicon glyphicon-thumbs-up'></span>  Accept</button>  <button type='button' class='btn btn-danger btn-sm'><span class='glyphicon glyphicon-thumbs-down'></span>  Reject</button></li>";
+  }
+  $("#" + container).html(htmllist);
+  $("#" + container + " .list-group-item button.btn-default").each(function() {
+    var curid = $(this).parent().attr("id");
+    $(this).popover({
+        html: true,
+        placement: 'top',
+        content: generateTripPopover(curid, cur_trips),
+    });
+  });
+  $("#" + container + " .list-group-item button.btn-success").click(function() {
+    cur_id = $(this).parent().attr("id");
+    updateStatus("trip", cur_id, "approve", "");
+  });
+  $("#" + container + " .list-group-item button.btn-danger").click(function() {
+    cur_id = $(this).parent().attr("id");
+    $('#reject .modal-title').text("Reject trip request");
+    $('#reject').modal('show');
+  });
+}
+
+function removeElement() {
+  $("#" + cur_id).remove();
+}
+
+function generateTripPopover(id, ctrips) {
+  var html = '<dl class="dl-horizontal">';
+  var i,j,active;
+  for(i=0; i < ctrips.length; i++) {
+    if(ctrips[i]._id == id) {
+      for(j=0; j<labels.length; j++) {
+        key = labels[j];
+        if(key=="accommodation") {
+          html += '<dt>Services</dt><dd><div>';
+          for(var value in ctrips[i][key]) {
+            if(ctrips[i][key][value])
+              html += '<span class="icon-' + value + '"></span>';
+          }
+          html += '</div></dd>';
+        } else {
+          html += '<dt>' + key.capitalizeFirst() + '</dt><dd>' + ctrips[i][key] + '</dd>';
+        }
+      }
+      break;
+    }
+  }
+  return html;
+}
+</script>
+<div style="min-height:200px;display:block"></div>
+<div id="pm" class="hidden">
+<h2>Trips list <small>Waiting for approval</small></h2>
+<ul id="tripreq" class="col-lg-5"></ul>
+<h2>Expences list <small>Waiting for approval</small></h2>
+<ul id="expreq" class="col-lg-7"></ul>
+</div>
+<div class="modal fade" id="reject" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title"></h4>
+        </div>
+        <div class="modal-body">
+          Motivation:
+          <textarea class="form-control" id="note" name="note" rows="3" placeholder="Description"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btnreject">Reject</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->

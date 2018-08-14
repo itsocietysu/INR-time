@@ -1,0 +1,89 @@
+
+server:
+  server.socket_host: 0.0.0.0
+  server.socket_port: 9090
+  server.ssl_certificate: core/ts.pem
+  server.ssl_module: pyopenssl
+  server.ssl_private_key: core/ts.pem
+  log.access_file: ts_access.log
+  log.error_file: ts_error.log
+  
+static:
+  /static:
+    tools.staticdir.dir: www/static
+    tools.staticdir.on: true
+
+session:
+  tools.sessions.on: true
+  tools.auth.on: true
+  tools.sessions.storage_type: file
+  tools.sessions.storage_path: /tmp/.ts_sessions
+  tools.sessions.timeout: 60
+  tools.secureheaders.on: true
+  tools.sessions.secure: true
+  tools.sessions.httponly: true
+  
+mongodb:
+  hostname: localhost
+  port: 27017
+  db: ts
+
+auth:
+  page: www/auth.html
+  providers:
+    - ldap
+    - db
+  
+auth_db:
+  init.default.admin: ts_admin
+  init.default.password: ts_admin_pwd
+  
+auth_ldap:
+  hostname: 127.0.0.1
+  
+  # Bind/Search string to login and retrieve {username} information
+  bind_search_string: uid={username},ou=People,dc=abinsula,dc=com
+  
+  # Search filter to retrieve {username} informations
+  search_filter: uid={username}
+  
+logging:
+  error_log: NOTSET
+  access_log: NOTSET
+
+uploads:
+  folder: uploads/
+  
+reports:
+  multiplier_on_extras: 1.15
+  
+# Flow to get approved an expence
+approval_flow:
+  # APPROVED: notify only submitting user
+  - notify_approve: [ '%submitter%' ]
+  
+  # WAITING FOR ACCOUNTS: notify/waiting for the responsible accounts approvation
+  - approver: 'account'
+    notify_new: [ 'account' ]
+    notify_reject: [ '%submitter%' ]
+    
+  # WAITING FOR PM: notify/waiting for the responsible project managers approvation
+  - approver: 'project manager'
+    notify_new: [ 'project manager' ]
+    notify_reject: [ '%submitter%' ]
+    
+  # WAITING TO BE SUBMITTED: draft
+  - { }
+
+notifications:
+  providers:
+    - debug
+  smtp:
+    template_text: text
+    template_html: html
+    host: localhost
+    from_address: timesheet@domain.com
+  debug:
+    template: text
+    
+     

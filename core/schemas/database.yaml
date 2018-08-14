@@ -1,0 +1,353 @@
+
+customer:
+  type: object
+  additionalProperties: False
+  properties: 
+    _id:
+      type: string
+    name: 
+      type: string
+      minLength: 1
+    description:
+      type: string
+    address:
+      type: string
+    city:
+      type: string
+    postal_code:
+      type: string
+    country:
+      type: string
+    website:
+      type: string
+    email:
+      type: string
+      format: email
+    phone:
+      type: string
+    contact_person:
+      type: string
+    vat_number:
+      type: string
+
+user:
+  type: object
+  additionalProperties: False
+  properties: 
+    _id:
+      type: string
+    name: 
+      type: string
+      minLength: 1
+    surname:
+      type: string
+      minLength: 1
+    username:
+      type: string
+      minLength: 1
+    email:
+      type: string
+      format: email
+    phone:
+      type: string
+    mobile:
+      type: string
+    city:
+      type: string
+    group:
+      type: string
+      enum:
+        - administrator
+        - employee
+        - project manager
+        - account
+    status:
+      type: string
+      enum:
+        - active
+        - disabled
+    contract:
+      type: string
+      enum:
+        - oe
+        - ft
+        - st
+        - co
+    password: 
+      type: string
+      minLength: 1
+    salt: 
+      type: string
+    salary:
+      type: array
+      items:
+        additionalProperties: False
+        properties:
+          cost:
+            type: number
+          from:
+            type: string
+          to:
+            type: string
+
+project:
+  type: object
+  additionalProperties: False
+  properties:
+    _id:
+      type: string
+    customer:
+      type: string
+      minLength: 1
+    tags:
+      type: array
+      uniqueItems: true
+      items:
+        type: string
+    name: 
+      type: string
+      minLength: 1
+    description:
+      type: string
+    contact_person:
+      type: string
+    bkgcolor:
+      type: string
+    txtcolor:
+      type: string
+    start:
+      type: string
+      format: date
+    end:
+      type: string
+      format: date
+    tasks:
+      type: array
+      items:
+        properties:
+          name:
+            type: integer
+    grand_total:
+      type: number
+      optional: True
+    responsibles:
+      type: array
+      items:
+        optional: True
+        additionalProperties: False
+        properties:
+          _id:
+            type: string
+          name:
+            type: string
+          role:
+            type: string
+            enum:
+              - administrator
+              - employee
+              - project manager
+              - account
+    economics:
+      type: array
+      items:
+        optional: True
+        additionalProperties: False
+        properties:
+          period:
+            type: string
+            format: date
+          budget:
+            type: number
+          extra:
+            type: number
+          note:
+            type: string
+          invoiced:
+            type: number
+    employees:
+      type: array
+      items:
+        optional: True
+        additionalProperties: False
+        properties:
+          _id:
+            type: string
+          name:
+            type: string
+    trips:
+      type: array
+      items:
+        optional: True
+        additionalProperties: False
+        properties:
+          _id:
+            type: string
+          user_id:
+            type: string
+          description:
+            type: string
+          status:
+            type: integer
+          start:
+            type: string
+            format: date
+          end:
+            type: string
+            format: date
+          country:
+            type: string
+          city:
+            type: string
+          from:
+            type: string
+          notes:
+            type: array
+            items:
+              type: string
+          accommodation:
+            type: object
+            additionalProperties: False
+            properties:
+              car:
+                 type: boolean
+              hotel:
+                 type: boolean
+              airplane:
+                 type: boolean
+    expences:
+      type: array
+      items:
+        optional: True
+        additionalProperties: False
+        properties:
+          _id:
+            type: string
+          user_id:
+            type: string
+          trip_id:
+            type: string
+          status:
+            type: integer
+          date:
+            type: string
+            format: date
+          notes:
+            type: array
+            items:
+              type: string
+          file:
+            type: object
+            additionalProperties: False
+            properties:
+              _id:
+                type: string
+              name:
+                type: string
+          objects:
+            type: array
+            items:
+              optional: True
+              additionalProperties: False
+              properties:
+                date:
+                  type: string
+                  format: date
+                city:
+                  type: string
+                amount:
+                  type: number
+                category:
+                  type: integer
+                description:
+                  type: string
+                paidby:
+                  type: integer
+                invoice:
+                  type: boolean
+                file:
+                  type: object
+                  additionalProperties: False
+                  properties:
+                    _id:
+                      type: string
+                    name:
+                      type: string
+
+day:
+  type: object
+  additionalProperties: False
+  properties:
+    _id:
+      type: string
+    date:
+      type: string
+      format: date
+    users:
+      optional: True
+      type: array
+      items:
+        properties:
+          user_id:
+            type: string
+          hours:
+            optional: True
+            type: array
+            items: 
+              properties:
+                project:
+                  type: string
+                amount:
+                  type: number
+                isextra:
+                  type: boolean
+                note:
+                  type: string
+                task:
+                  type: integer
+              
+offer:
+  type: object
+  additionalProperties: False
+  properties:
+    _id:
+      type: string
+    project:
+      type: string
+    name:
+      type: string
+    description:
+      type: string
+    amount:
+      type: number
+    expences:
+      type: boolean
+    paydelay:
+      type: integer
+    customerref:
+      type: string
+    upload_files:
+      optional: True
+      type: array
+      items:
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+      
+upload:
+  type: object
+  additionalProperties: False
+  properties:
+    _id:
+      type: string
+    name:
+      type: string
+    content_type:
+      type: string
+    uploader:
+      type: string
+    time:
+      type: date-time
+
+

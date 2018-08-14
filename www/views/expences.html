@@ -1,0 +1,345 @@
+<script src="/static/js/bootstrap-switch.min.js"></script>
+<script type="text/javascript">
+var validator, isupdate = false, elemnum = 0, cur_file;
+var totals = new Array();
+$(document).ready(function() {
+  $("#exptable tbody tr td:last").click(function() {
+    edittableline(this);
+  });
+  $("#offerfile").change(function() {
+    var value = $(this).val();
+    if(value != "") {
+      cur_file = $(this);
+      file.upload($("#offerfile")[0].files[0], uploadComplete, uploadFailed);
+    }
+  });
+  $("#exptable tfoot tr:first td:last").click(function(event) {
+    newtableline();
+    fillWithData();
+  });
+  validator = $("#expForm").validate();
+  $("select[name='expdate']").rules("add", {
+    required: true,
+    dateISO: true
+  });
+  $("#btnsubmit, #btnsave").click(function(event) {
+    event.preventDefault();
+    if(!validator.form())
+      return;
+    if(this.id == "btnsubmit")
+      expence.update(isupdate, "expForm", 3, sendapprove);
+    else
+      expence.update(isupdate, "expForm", 3, resetExpForm);
+  });
+  $("#expuser_id").bootstrapSwitch();
+  newtableline();
+  var today = new Date();
+  today = new Date(today.setDate(1));
+  var from =  new Date(today.setMonth(today.getMonth() - 2));
+  var to = new Date(today.setMonth(today.getMonth() + 4));
+  $("#expdate").html(generateDropDate(from,to));
+  $("#expdate")[0].selectedIndex = 3;
+  user.me(userdata);
+});
+
+function sendapprove(data) {
+  var filter = { project_id:$("#expprj").val(), user_id: me._id, expence_id:data.ids[0], action:'approve', note:''}
+  approval.set(filter, resetExpForm);
+}
+function userdata(data){
+  me = data;
+  loadProjectsList("expprj");
+  loadExpencesList("expList");
+}
+
+function resetExpForm(load) {
+  if(load == true) {} else {
+    loadExpencesList("expList");
+  }
+  elemnum = 0;
+  isupdate = false;
+  $("#exp_id").val("0");
+  $("#offerfile").val();
+  $("#offerfile").removeClass("hidden");
+  $("#offerfile").next("p").addClass("hidden");
+  $("#expList li").removeClass("active");
+  $("#exptable tbody").html("");
+  $("#expForm")[0].reset();
+  newtableline();
+  $("#exptable tfoot tr:last").html("");
+}
+
+function loadExpencesList(list) {
+  var filter = {status:[3], user_id: me._id, employee_id: me._id};
+  expence.load(filter, loadExpences, "expList");
+}
+
+function loadExpences(data, args) {
+  var i,j, container = args[0];
+  var htmllist = "";
+  for(i=0; i< data.length; i++) {
+          htmllist += "<li id='" + data[i]._id + "'class='list-group-item'><span class='glyphicon glyphicon-edit'></span> " + project.getname(data[i].project_id) + " " + data[i].date + "</li>";
+  }
+  htmllist += "<li class='list-group-item'><span class='glyphicon glyphicon-plus'></span> New Expence ...</li>";
+  $("#" + container).html(htmllist);
+  $("#" + container + " li").click(function() {
+    resetExpForm(true);
+    $(this).addClass("active");
+    if(this.id == "")
+      return;
+    isupdate = true;
+    loadExpDetails(expence.getexp(this.id), container);
+  });
+}
+
+function loadExpDetails(data, container) {
+  var j;
+  $("#exp_id").val(data._id);
+  $("#expprj").val(data.project_id);
+  $("#exptrip").val(data.trip_id);
+  $("#expdate").val(data.date);
+  if(data.user_id != "0") {
+    $("#expuser_id").val(true);
+  }
+  if(data.file) {
+    cur_file = $("#offerfile");
+    $(cur_file).addClass("hidden");
+    var filename = $(cur_file).next("p");
+    $(filename).attr("id",data.file._id);
+    $(filename).html(generateFileEntry(data.file._id, data.file.name));
+    $(filename).removeClass("hidden");
+    $(cur_file).next("p").find(".glyphicon-trash").click(function() {
+      var id = $(this).parent().attr("id");
+      file.delete($(this).parent().attr("id"), deleteFile, $(this).parent());
+    });
+  }
+  for(j=0; j < data.objects.length; j++) {
+    $("input[name=" + (j+1) + "exp_date]").val(data.objects[j].date);
+    $("input[name=" + (j+1) + "exp_city]").val(data.objects[j].city);
+    $("input[name=" + (j+1) + "exp_amount]").val(data.objects[j].amount);
+    $("select[name=" + (j+1) + "exp_category]").val(data.objects[j].category);
+    $("input[name=" + (j+1) + "exp_description]").val(data.objects[j].description);
+    $("input[name=" + (j+1) + "exp_invoice]").bootstrapSwitch('setState',data.objects[j].invoice);
+    if(data.objects[j].paidby == 0)
+      $("input[name=" + (j+1) + "exp_paidby]").bootstrapSwitch('setState', false);
+    else
+      $("input[name=" + (j+1) + "exp_paidby]").bootstrapSwitch('setState', true);
+    if(data.objects[j].file) {
+      cur_file = $("input[name=" + (j+1) + "exp_file]");
+      $(cur_file).addClass("hidden");
+      var filename = $(cur_file).next("p");
+      $(filename).attr("id",data.objects[j].file._id);
+      $(filename).html(generateFileEntry(data.objects[j].file._id, data.objects[j].file.name));
+      $(filename).removeClass("hidden");
+      $(cur_file).next("p").find(".glyphicon-trash").click(function() {
+        var id = $(this).parent().attr("id");
+        file.delete($(this).parent().attr("id"), deleteFile, $(this).parent());
+      });
+    }
+    if(j+1 < data.objects.length)
+      newtableline();
+  }
+  computetotal();
+}
+
+function loadProjects(data, args) {
+  var i, container = args[0];
+  var htmlselect = "";
+  for(i=0;i < data.length; i++) {
+    htmlselect += "<option value='" + data[i]._id + "'>" + data[i].name + "</option>";
+  }
+  $("#" + container).html(htmlselect);
+  var filter = { start:"2013-01-01", end:"2014-12-31", status: [0], user_id: me._id, employee_id:me._id, project_id: $("#" + container).val() };
+  trip.load(filter,loadTrips, "exptrip");
+  $("#" + container).change(function() {
+    var filter = { start:"2013-01-01", end:"2014-12-31", status: [0], user_id: me._id, employee_id:me._id, project_id: $("#" + container).val() };
+    trip.load(filter,loadTrips, "exptrip");
+  });
+}
+
+function loadProjectsList(list) {
+  var filter = [{ 'employees._id' : me._id },{name:1},{name:1}];
+  project.load(filter, loadProjects, list);
+}
+
+function loadTrips(data, container) {
+  var i,j;
+  var htmlselect = "<option value='0'>General expences</option>";
+  for(i=0;i < data.length; i++) {
+      htmlselect += "<option value='" + data[i]._id + "'>" + data[i].city + " -- " + data[i].start + "</option>";
+  }
+  $("#" + container).html(htmlselect);
+}
+
+function uploadComplete(data) {
+  var response = jQuery.parseJSON( data.target.responseText )
+  $(cur_file).addClass("hidden");
+  var filename = $(cur_file).next("p");
+  $(filename).attr("id",response.upload_id);
+  $(filename).html(generateFileEntry(response.upload_id, $(cur_file).val()));
+  $(filename).removeClass("hidden");
+  $(cur_file).next("p").find(".glyphicon-trash").click(function() {
+    var id = $(this).parent().attr("id");
+    file.delete($(this).parent().attr("id"), deleteFile, $(this).parent());
+  });
+}
+
+function deleteFile(elem, data) {
+  $(elem).addClass("hidden");
+  $(elem).prev("input").val("");
+  $(elem).prev("input").removeClass("hidden");
+}
+
+function generateFileEntry(id, name) {
+  return '<a href="/file/download/'+ id + '">' + name + '</a> <span class="glyphicon glyphicon-trash"></span>'
+}
+
+function uploadFailed(evt) {
+  showmessage("error", "There was an error attempting to upload the file.");
+}
+
+function newtableline() {
+    $("#exptable tbody").append(generatetableline(++elemnum));
+    var row = $("#exptable tbody tr:last");
+    generateSelect($(row).find("select[name='" + elemnum + "exp_category']"));
+    $(row).find("input[name='" + elemnum + "exp_date']").datepicker({format: "yyyy-mm-dd", autoclose:true});
+    $("#exptable tbody tr:last td:last").click(function() {
+      removetableline($(this).parent());
+      computetotal();
+    });
+    //add validation rules
+    $(row).find("input[name='" + elemnum + "exp_date']").rules("add", {
+      required: true,
+      dateISO: true
+    });
+    $(row).find("input[name='" + elemnum + "exp_city']").rules("add", {
+      required: true
+    });
+    $(row).find("input[name='" + elemnum + "exp_amount']").rules("add", {
+      required: true,
+      number: true
+    });
+    $(row).find("input[name='" + elemnum + "exp_amount']").change(function() {
+      $(this).val($(this).val().replace(",","."));
+      computetotal();
+    });
+    $(row).find("select[name='" + elemnum + "exp_category']").change(function() {
+      computetotal();
+    });
+    $(row).find("input[name='" + elemnum + "exp_description']").rules("add", {
+      required: function(element) {
+         return $(element).parent().parent().find("input[name='" + elemnum + "exp_paidby']").is(":checked");
+      }
+    });
+    $(row).find("input[name='" + elemnum + "exp_file']").change(function() {
+      var value = $(this).val();
+      if(value != "") {
+        cur_file = $(this);
+        file.upload($(this)[0].files[0], uploadComplete, uploadFailed);
+      }
+    });
+    $(row).find("input[type='checkbox']").addClass('switch-small').attr('data-on-label','YES').attr('data-off-label','NO').bootstrapSwitch();
+}
+function fillWithData() {
+  var date = $("#exptable tr:last").prev().find("td:eq(1) input").val();
+  var city = $("#exptable tr:last").prev().find("td:eq(2) input").val();
+  $("#exptable tr:last").find("td:eq(1) input").val(date);
+  $("#exptable tr:last").find("td:eq(2) input").val(city);
+}
+
+function removetableline(row) {
+  $(row).remove();
+}
+
+function computetotal() {
+//scan table
+  var i, tfoot = "<td>Total by cat</td>";
+  for(i = 0; i < expcategories.length; i++) {
+    totals[i] = 0;
+  }
+  $("#exptable tbody tr").each(function() {
+    var value = $(this).find("input[name*='exp_amount']").val();
+    if( value == "" )
+      value = 0;
+    totals[Number($(this).find("select").val())] += parseFloat(value);
+  });
+  for (i = 1; i < expcategories.length; i++) {
+    tfoot += "<td>" + expcategories[i] + ": " + totals[i] + "</td>";
+  }
+  tfoot += "<td></td><td></td><td></td><td></td><td></td>"
+  $("#exptable tfoot tr:last").html(tfoot);
+}
+
+function generatetableline(index) {
+  var newline = '<tr><td>%i%</td><td><input type="text" class="form-control datepicker" name="%i%exp_date" placeholder="2013-01-01"></td><td><input type="text" class="form-control" name="%i%exp_city" placeholder="City"></td><td><div class="col-lg-12 input-group"><input type="text" class="form-control" name="%i%exp_amount"><span class="input-group-addon">&euro;</span></div></td><td><select class="form-control" name="%i%exp_category"></select></td><td><input type="text" class="form-control" name="%i%exp_description" placeholder="Note"></td><td><input type="checkbox" name="%i%exp_paidby"></td><td><input type="checkbox" name="%i%exp_invoice"></td><td><input type="file" name="%i%exp_file"><p class="filename hidden"></p></td><td>Remove <span class="glyphicon glyphicon-minus"></span></td></tr>';
+  return newline.replace(/%i%/g,index);
+}
+</script>
+<h2>New expences</h2>
+  <form class="form-horizontal" role="form" method="post" action="/index/customers" id="expForm">
+<div class="row">
+  <p>Select a draft note expence or create a new one</p>
+  <div class="col-lg-4">
+    <ul class="list-group" id="expList"></ul>
+  </div>
+  <div class="col-lg-4">
+    <div class="form-group">
+      <input type="hidden" id="exp_id" value="0" />
+      <label for="expprj" class="col-lg-6 control-label">Expences related to project</label>
+      <div class="col-lg-6">
+        <select class="form-control" id="expprj" name="expprj" ></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="exptrip" class="col-lg-6 control-label">Expences related to the trip</label>
+      <div class="col-lg-6">
+        <select class="form-control" id="exptrip" name="exptrip" ></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="expdate" class="col-lg-6 control-label">Month of competence</label>
+      <div class="col-lg-6">
+        <select class="form-control" id="expdate" name="expdate"></select>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="form-group">
+      <label for="expuser_id" class="col-lg-6 control-label">Personal Expences</label>
+      <div class="col-lg-6">
+        <input type="checkbox" name="expuser_id" id="expuser_id" class="switch-small" checked data-on-label="YES" data-off-label="NO">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="offerfile" class="col-lg-6 control-label">Upload global file with all receipts</label>
+      <div class="col-lg-6">
+        <input type="file" name="data" id="offerfile"><p class="filename hidden">
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <table class="table table-striped table-condensed" id="exptable">
+    <thead>
+      <tr><th>#</th><th>Date</th><th>City</th><th>Amount</th><th>Category</th><th>Description</th><th>Paid by company</th><th>Invoice</th><th>Receipt</th><th></th></tr>
+    </thead>
+    <tfoot><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Add <span class="glyphicon glyphicon-plus"></span></td></tr><tr></tr></tfoot>
+    <tbody>
+<!--      <tr>
+        <td>1</td>
+        <td><input type="text" class="form-control datepicker" name="expdate" placeholder="2013-01-01"></td>
+        <td><input type="text" class="form-control" name="expcity" placeholder="City"></td>
+        <td><div class="col-lg-12 input-group"><input type="text" class="form-control" name="expamount"><span class="input-group-addon">&euro;</span></div></td>
+        <td><select class="form-control" name="expcategory"></select></td>
+        <td><input type="text" class="form-control" name="expdescription" placeholder="Note"></td>
+        <td><input type="checkbox" name="exppaidby"></td>
+        <td><input type="file" name="expfile"><p class="filename hidden"></p></td>
+        <td>Add <span class="glyphicon glyphicon-plus"></span></td>
+      </tr>-->
+    </tbody>
+  </table>
+  <button type="submit" class="btn btn-primary" id="btnsubmit"><span class="glyphicon glyphicon-plus"></span> Submit</button>
+  <button type="submit" class="btn btn-primary" id="btnsave"><span class="glyphicon glyphicon-save"></span> Save Draft</button>
+  <button type="reset" class="btn" id="btnreset"> Reset</button>
+</div>
+</form>

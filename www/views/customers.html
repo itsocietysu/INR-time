@@ -1,0 +1,220 @@
+<script type="text/javascript">
+var validator, isupdate = false;
+$(document).ready(function() {
+  user.me(nop);
+  resetCustomerForm();
+  $("#custForm").submit(function(event) {
+    event.preventDefault();
+    if(!validator.form())
+      return;
+    customer.update(isupdate, "custForm", resetCustomerForm);
+  });
+  $("#btnreset").click(function() {
+    resetCustomerForm(true);
+  });
+  $("#btnremove").click(function() {
+    customer.remove($("#cust_id").val(),resetCustomerForm);
+  });
+  validator = $("#custForm").validate({
+    rules: {
+      custname:{
+        required: true
+      },
+      custaddress:{
+        required: true
+      },
+      custcity:{
+        required: true
+      },
+      custpostal_code:{
+        required: true
+      },
+      custcountry:{
+        required: true
+      },
+      custvat_number:{
+        required: true,
+        digits: true
+      },
+      custwebsite:{
+        required: true,
+        url: true
+      },
+      custcontact_person:{
+        required: true
+      },
+      custphone:{
+	required: function(element) {
+            if($("#custemail").val() != "")
+              return false;
+            else
+              return true;
+        },
+      },
+      custemail:{
+	required: function(element) {
+            if($("#custphone").val() != "")
+              return false;
+            else
+              return true;
+        },
+        email: true
+      },
+    },
+    highlight: function (element) {
+      $(element).closest('.form-group').addClass('has-error');
+    },
+    unhighlight: function (element) {
+      $(element).closest('.form-group').removeClass('has-error');
+    }
+  });
+});
+
+function loadCustomersList(list) {
+  var filter = [{},{name:1},{name:1}];
+  customer.load(filter, loadCustomers, list);
+}
+
+function resetCustomerForm(load) {
+  if(load == true) {} else {
+    loadCustomersList("custList");
+  }
+  isupdate = false;
+  $("#cust_id").val(0);
+  $("#custForm")[0].reset();
+  $("#btnremove").addClass("hidden");
+  $("#custList li").removeClass("active");
+  $("#btnsubmit").html("<span class='glyphicon glyphicon-plus'></span> Add");
+}
+function loadCustomers(data, args) {
+  var i, container = args[0];
+  var htmllist = "";
+  for(i=0;i < data.length; i++) {
+    htmllist += "<li id='" + data[i]._id + "'class='list-group-item'><span class='glyphicon glyphicon-edit'></span> " + data[i].name + "</li>";
+  }
+  //add line for new customer
+  htmllist += "<li class='list-group-item'><span class='glyphicon glyphicon-plus'></span> New Customer ...</li>";
+  $("#" + container).html(htmllist);
+  $(".list-group-item").click(function() {
+    resetCustomerForm(true);
+    $(this).addClass("active");
+    if(this.id == "")
+      return;
+    isupdate = true;
+    var filter = createFilterForm("custForm");
+    filter[0]._id = this.id;
+    customer.loadSingle(filter,loadCustomerDetails);
+  });
+}
+
+function createFilterForm(container) {
+  var filter = [{},{},{name:1}];
+  $("#" + container + " input, #" + container + " textarea").each(function (){
+    var property = $(this).attr("id").substr(4);
+    if (property == "_id")
+      return;
+    filter[1][property] = 1;
+  });
+  return filter;
+}
+
+function loadCustomerDetails(data) {
+  for(var key in data[0]) {
+    $("#cust" + key).val(data[0][key]);
+  }
+  $(".btn-danger").removeClass("hidden");
+  $("#btnsubmit").html("<span class='glyphicon glyphicon-edit'></span> Update");
+}
+</script>
+<h2>Customer Management</h2>
+<div class="row">
+    <div class="col-lg-5">
+<h3>Current customer list</h3>
+<p>Click on a customer to edit its data or to last element to add a new one</p>
+<ul class="list-group col-lg-8" id="custList">
+</ul>
+
+</div>
+<div class="col-lg-6">
+<h3>Customer details</h3>
+
+<form class="form-horizontal" role="form" method="post" action="/index/customers" id="custForm">
+  <input type="hidden" id="cust_id" value="0">
+  <div class="form-group">
+    <label for="custname" class="col-lg-4 control-label">Name</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custname" name="custname" placeholder="Name">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="custdescription" class="col-lg-4 control-label">Description</label>
+    <div class="col-lg-6">
+      <textarea class="form-control" id="custdescription" name="custdescription" rows="3" placeholder="Description"></textarea>
+    </div>
+  </div>
+
+<div class="form-group">
+    <label for="custaddress" class="col-lg-4 control-label">Address</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custaddress" name="custaddress" placeholder="Address">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custcity" class="col-lg-4 control-label">City</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custcity" name="custcity" placeholder="City">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custpostal_code" class="col-lg-4 control-label">Postal Code</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custpostal_code" name="custpostal_code" placeholder="Postal Code">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custcountry" class="col-lg-4 control-label">Country</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custcountry" name="custcountry" placeholder="Country">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custvat_number" class="col-lg-4 control-label">VAT</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custvat_number" name="custvat_number" placeholder="0123456789">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custwebsite" class="col-lg-4 control-label">Website</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custwebsite" name="custwebsite" placeholder="http://www.example.com">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custcontact_person" class="col-lg-4 control-label">Contact Person</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custcontact_person" name="custcontact_person" placeholder="Contact Person">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custphone" class="col-lg-4 control-label">Phone</label>
+    <div class="col-lg-6">
+      <input type="text" class="form-control" id="custphone" name="custphone" placeholder="Phone">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="custemail" class="col-lg-4 control-label">Email</label>
+    <div class="col-lg-6">
+      <input type="email" class="form-control" id="custemail" name="custemail" placeholder="Email">
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-4 col-lg-6">
+      <button type="submit" class="btn btn-primary" id="btnsubmit"><span class="glyphicon glyphicon-plus"></span> Add</button>
+      <button type="reset" class="btn" id="btnreset"> Reset</button>
+      <button type="button" class="btn btn-danger hidden" id="btnremove"><span class="glyphicon glyphicon-trash"></span> Remove</button>
+    </div>
+
+  </div>
+</form>
+</div>

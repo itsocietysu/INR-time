@@ -1,0 +1,487 @@
+<link rel='stylesheet' type='text/css' href='/static/css/fullcalendar.css' />
+<script src="/static/js/bootstrap-switch.min.js"></script>
+<script type="text/javascript">
+var me, validator, datestart, dateend, isedit, cevent, calendar, firstday, lastday, expectedwh, signedwh, myhours = new Array();
+$(document).ready( function() {
+  $("[data-toggle=tooltip]").tooltip({placement:'right'});
+  calendar = $('#calendar').fullCalendar({
+    firstDay:1,
+    aspectRatio: 1.6,
+    weekNumbers:true,
+    selectable:true,
+    select: function(start, end, allDay) {
+      datestart = start;
+      dateend = end;
+      if(end.simpleDate() < firstday || start.simpleDate() > lastday) {
+        calendar.fullCalendar('unselect');
+        return;
+      }
+      $('#edithours').modal('show');
+    },
+    eventClick: function(calEvent, jsEvent, view) {
+      cevent = calEvent;
+      $('#removehours').modal('show');
+    },
+    viewRender : function(view,element) {
+      if(myhours.length != 0) {
+        currentVis();
+        filter = { 'start' : firstday, 'end' : lastday, 'user_id' : me._id };
+        day.load(filter,loadDays);
+      }
+    },
+    eventRender: function (event, element) {
+      element.find('span.fc-event-title').html(element.find('span.fc-event-title').text());
+    }
+  });
+  $("#hours-range").slider({
+    tooltip:'hide'
+  });
+  $("#hours-range").on('slide', function(slideEvt) {
+    $("#hoursamount").val(slideEvt.value);
+  });
+  $(document).keypress(function(e) {
+    if(e.keyCode == 13) {
+      if($('#edithours').attr("aria-hidden") == "false") {
+        $("#btnsave").trigger("click");
+      }
+      if($('#removehours').attr("aria-hidden") == "false") {
+        $("#btnremove").trigger("click");
+      }
+      return;
+    }
+  });
+  $("#btnsave").click(function () {
+    if(!validator.form())
+      return;
+    var obj = {};
+    obj.project = $('#hoursproject').find('option:selected').val();
+    obj.projectname = $('#hoursproject').find('option:selected').text();
+    obj.amount = Number($("#hoursamount").val());
+    obj.task = Number($('#hourstask').find('option:selected').val());
+    obj.isextra = $("#hoursisextra").is(':checked') ? true : false;
+    obj.note = $("#hoursnotes").val();
+    if(isedit)
+    {
+      var revent = {};
+      var cday = cevent.start.getDate() - 1;
+      revent.project = cevent.id.substr(11,24);
+      revent.isextra = cevent.id.substr(36).bool();
+      removeEvent(revent, cday);
+      datestart = dateend = cevent.start;
+      isedit = false;
+    }
+    var result = addCalEvent(datestart, dateend, obj, true);
+    $('#edithours').modal('hide');
+    if(result!="") {
+      var text = "<ul>" + result + "</ul>";
+      $('#modalbox .modal-body').html(text);
+      $('#modalbox').modal('show');
+    }
+  });
+  $("#btnremove").click(function () {
+    var cday = cevent.start.getDate() - 1;
+    var revent = {};
+    revent.project = cevent.id.substr(11,24);
+    revent.isextra = cevent.id.substr(36).bool();
+    removeEvent(revent, cday);
+    $('#removehours').modal('hide');
+  });
+  $("#btnedit").click(function () {
+    var cday = cevent.start.getDate() - 1;
+    var i, event = {};
+    event.project = cevent.id.substr(11,24);
+    event.isextra = cevent.id.substr(36).bool();
+    for(i = 0; i < myhours[cday].users[0].hours.length; i++) {
+      if(eventCompare(myhours[cday].users[0].hours[i],event)) {
+        event = myhours[cday].users[0].hours[i];
+        $('#hoursproject').val(event.project);
+        loadtasks(project._records, event.project);
+        $('#hourstask').val(event.task);
+        $("#hoursisextra").bootstrapSwitch('setState',event.isextra);
+        $('#hoursamount').val(event.amount);
+        $("#hours-range").slider("setValue", event.amount);
+        $('#hoursnotes').text(event.note);
+        break;
+      }
+    }
+    isedit = true;
+    $('#removehours').modal('hide');
+    $('#edithours').modal('show');
+  });
+  $("#hoursamount").val( $("#hours-range").slider("getValue"));
+  $("#hoursamount").focusout(function() {
+    $("#hours-range").slider("setValue", parseInt($(this).val()));
+  });
+  currentVis();
+  user.me(userdata);
+  $("#hoursisextra").bootstrapSwitch();
+  validator = $("#frmedithours").validate({
+    rules: {
+      hoursamount: {
+        required: true,
+        min: 1,
+        max: 8,
+      }
+    },
+    highlight: function (element) {
+      $(element).closest('.form-group').addClass('has-error');
+    },
+    unhighlight: function (element) {
+      $(element).closest('.form-group').removeClass('has-error');
+    }
+  });
+});
+
+function resetFormEditHours() {
+  $("#frmedithours")[0].reset();
+  $("#hourstask").html("");
+  $("#hoursamount").val("8");
+  $("#hours-range").slider("setValue", 8);
+}
+
+function userdata(data){
+  me = data;
+  var filter = [ { 'employees._id' : me._id }, { name: 1, tasks : 1, bkgcolor: 1, txtcolor:1, description:1 }, { name: 1 } ];
+  project.load(filter,loadprojects,"");
+}
+
+function currentVis() {
+  firstday = calendar.fullCalendar('getView').start.simpleDate();
+  lastday = new Date(calendar.fullCalendar('getView').end);
+  lastday.setDate(lastday.getDate()-1);
+  singleday = firstday;
+  expectedwh = 0;
+  for (var d = calendar.fullCalendar('getView').start; d <= lastday; d.setDate(d.getDate() + 1)) {
+    if(d.getDay() != 0 && d.getDay() != 6)
+      expectedwh += 8;
+  }
+  lastday = lastday.simpleDate();
+}
+
+function removeEvent(revent, myday) {
+  for(var i = 0; i < myhours[myday].users[0].hours.length; i++) {
+    if(eventCompare(myhours[myday].users[0].hours[i],revent)) {
+      myhours[myday].users[0].hours.splice(i,1);
+      var singleday = [{}];
+      singleday[0] = myhours[myday];
+      day.update(singleday, loadCalendarHours);
+      break;
+    }
+  }
+}
+
+function eventCompare(array, myevent) {
+  if(array.project == myevent.project && array.isextra == myevent.isextra)
+    return true;
+  else
+    return false;
+}
+
+function loadDays(data) {
+  var i, index;
+  var aday = firstday;
+  for(i=0; i < 31; i++) {
+    aday = new Date(aday);
+    myhours[i] = {};
+    myhours[i].date = aday.simpleDate();
+    aday.setDate(aday.getDate() + 1);
+  }
+  for(i=0; i< data.length; i++) {
+    index = Number(data[i].date.substr(8));
+    myhours[index-1].users = data[i].users;
+  }
+  loadCalendarHours(myhours);
+}
+
+function loadprojects(myprj) {
+  var i, j, index, htmlselect = "<option value=''></option>";
+  for(i = 0; i < myprj.length; i++) {
+    htmlselect += "<option value='" + myprj[i]._id + "'>" + myprj[i].name + " -- " + myprj[i].description.substr(0,30) +  "</option>";
+  }
+  $("#hoursproject").html(htmlselect);
+  $("#hoursproject").change(function() {
+    loadtasks(myprj, $(this).val());
+  });
+  filter = { 'start' : firstday, 'end' : lastday, 'user_id' : me._id };
+  day.load(filter,loadDays);
+}
+
+function loadtasks(myprj, prjid) {
+  var htmlselect = "";
+  $("#hoursisextra").bootstrapSwitch('setDisabled',false);
+  for(i = 0; i < myprj.length; i++) {
+    if (myprj[i]._id == prjid)  {
+      for(j = 0; j < myprj[i].tasks.length; j++) {
+        index = myprj[i].tasks[j];
+        htmlselect += "<option value='" + index + "'>" + getTaskName(index) + "</option>";
+      }
+      if (myprj[i].name == "ABI_H000") {
+        $("#hoursisextra").bootstrapSwitch('setDisabled',true);
+        $("#hoursisextra").bootstrapSwitch('setState',false);
+      }
+      break;
+    }
+  }
+  $("#hourstask").html(htmlselect);
+}
+
+function addCalEvent(start, end, event, allDay) {
+  if (start.simpleDate() < firstday) {
+    start = new Date(firstday);
+  }
+  if (end.simpleDate() > lastday) {
+    end = new Date(lastday);
+  }
+  var diffdays = end.getDate() - start.getDate();
+  var cday, i, j, found, cur_hours, result="";
+  for(i = 0; i <= diffdays; i++) {
+    if ( (start.getDay() == 6 || start.getDay() == 0) && diffdays != 0) {
+      start = new Date(start);
+      start.setDate(start.getDate()+1);
+      continue;
+    }
+    cday = start.getDate()-1;
+    if (myhours[cday].users) {
+      found = false;
+      //calculate current hours for day
+      if(!event.isextra) {
+        cur_hours = calculateDayHours(myhours[cday].users[0].hours, false );
+        if(cur_hours + event.amount > 8) {
+          result += "<li>Day " + (cday+1) + " was not updated because exceding maximum number of hours in a day (8)</li>";
+          continue;
+        }
+      }
+      //search for same event data
+      for(j = 0; j < myhours[cday].users[0].hours.length; j++) {
+        if(myhours[cday].users[0].hours[j].project == event.project && myhours[cday].users[0].hours[j].isextra == event.isextra) {
+          saveEvent(myhours[cday].users[0].hours[j], event);
+          found = true;
+          continue;
+        }
+      }
+      if(!found) {
+        myhours[cday].users[0].hours[j] = {}
+        saveEvent(myhours[cday].users[0].hours[j], event);
+      }
+    } else {
+      myhours[cday].users = new Array();
+      myhours[cday].users[0] = {}
+      myhours[cday].users[0].user_id = me._id;
+      myhours[cday].users[0].hours = new Array();
+      myhours[cday].users[0].hours[0] = {};
+      saveEvent(myhours[cday].users[0].hours[0], event);
+    }
+    start = new Date(start);
+    start.setDate(start.getDate()+1);
+   }
+  //savedata
+  day.update(myhours, nop);
+  loadCalendarHours(myhours);
+  calendar.fullCalendar('unselect');
+  //reset form
+  resetFormEditHours();
+  return result;
+}
+
+function calculateDayHours(hours, isextra) {
+  var i, total=0;
+  for(i=0; i < hours.length; i++) {
+    if(hours[i].isextra == isextra) {
+      total += hours[i].amount;
+    }
+  }
+  return total;
+}
+
+function saveEvent(arrayEl, event) {
+  arrayEl.project = event.project;
+  arrayEl.amount = Number(event.amount);
+  arrayEl.isextra = event.isextra;
+  arrayEl.note = event.note;
+  arrayEl.task = Number(event.task);
+}
+
+function loadCalendarHours(list) {
+  if(!list.error)
+    list = myhours;
+  var i, d, j, singleentry;
+  signedwh = 0;
+  $("#calendar").fullCalendar('removeEvents');
+  for(i = 0; i < list.length; i++) {
+    if(list[i].users) {
+      for(j = 0; j < list[i].users[0].hours.length; j++) {
+      //add event
+        var event = {};
+        singleentry = list[i].users[0].hours[j];
+        event.id = list[i].date + "+" + singleentry.project + "+" + singleentry.isextra;
+        event.title = "<b>" + project.getname(singleentry.project) + "</b>";
+        if(singleentry.note != "")
+	        event.title += "<a href='#' rel='tooltip' title='"+ singleentry.note + "'><span class='glyphicon glyphicon-info-sign' style='color:" + project.gettxtcolor(singleentry.project) + "' ></span></a>";
+        event.title += "<br>" + singleentry.amount + "h -- " + getTaskName(singleentry.task);
+        event.backgroundColor = project.getbkgcolor(singleentry.project);
+        event.borderColor = project.getbkgcolor(singleentry.project);
+        event.textColor = project.gettxtcolor(singleentry.project);
+        event.start = list[i].date;
+        event.end = list[i].date;
+        event.note = singleentry.note;
+        d = new Date(list[i].date);
+        if(d.getDay() != 0 && d.getDay() != 0 && singleentry.isextra == false)
+          signedwh += singleentry.amount;
+        if(singleentry.isextra)
+          event.borderColor = "#f00";
+        $("#calendar").fullCalendar('renderEvent', event , false);
+      }
+    }
+  }
+  $("[rel=tooltip]").tooltip();
+  displayHours(signedwh, expectedwh);
+}
+
+function displayHours(partial, total) {
+  var html;
+  if(partial == total)
+    html = '<span id="hours" class="badge pull-right green">';
+  else
+    html = '<span id="hours" class="badge pull-right red">';
+  html += partial + '/'+ total + ' Hours</span><span class="glyphicon glyphicon-calendar"></span> Calendar';
+  $("#menu_calendar").html(html);
+}
+</script>
+<!--<a title="" data-toggle="tooltip" href="#" data-original-title="Default tooltip">you probably</a>-->
+<div id="calendar"></div>
+
+<div class="modal fade" id="removehours" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title">Edit or remove hours</h4>
+        </div>
+        <div class="modal-body">
+          Do you want to edit or remove these hours from your timesheet?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btnedit">Edit</button>
+          <button type="button" class="btn btn-danger" id="btnremove">Remove</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+<div class="modal fade" id="modalbox" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Error</h4>
+      </div>
+      <div class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<div class="modal fade" id="edithours">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Add hours</h4>
+      </div>
+      <div class="modal-body">
+	<form class="form-horizontal" id="frmedithours">
+	  <div class="form-group">
+	    <label for="hoursproject" class="col-lg-3 control-label">Project</label>
+	    <div class="col-lg-9">
+	      <select class="form-control" name="hoursproject" id="hoursproject" required>
+              </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label for="hourstask" class="col-lg-3 control-label">Task</label>
+	    <div class="col-lg-9">
+	      <select class="form-control" name="hourstask" id="hourstask" required>
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label for="hoursamount" class="col-lg-3 control-label">Hours</label>
+	    <div class="col-lg-7">
+              <input type="text" style="width:300px;" id="hours-range" data-slider-min="1" data-slider-max="8" data-slider-step="1" data-slider-value="8" >
+	    </div>
+	      <div class="col-lg-2">
+	        <input type="text" class="form-control" name="hoursamount" id="hoursamount">
+	      </div>
+	  </div>
+	  <div class="form-group">
+	    <label for="hoursisextra" class="col-lg-3 control-label">Is extra hour</label>
+	    <div class="col-lg-9">
+              <input type="checkbox" id="hoursisextra" data-on-label="YES" data-off-label="NO" class="switch-small">
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label for="hoursnotes" class="col-lg-3 control-label">Notes</label>
+	    <div class="col-lg-9">
+	      <textarea class="form-control" rows="3" id="hoursnotes" placeholder="Notes"></textarea>
+	    </div>
+	  </div>
+	</form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btnsave">Save</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<div id="help" class="hidden">
+  <h4>This view is needed to set the amount of worker's days/hours spent on the job.</h4>
+  <dl>
+    <dt>SETTING DAYS/HOURS:</dt>
+    <dd>To SET the spent time there are two different ways:
+      <ul>
+        <li>click on a single day cell, and fill the prompt window with the requested data (project, task, number of spent hours, check if the hours are extra time, eventually some note)</li>
+        <li>drag and drop along the whole month table and fill the prompt window with the requested data.</li>
+      </ul>
+    </dd>
+    <dt>NOTES: </dt>
+    <dd>
+      <ul>
+        <li>the first way allows to fill even saturday and sundays</li>
+        <li>Using the drag-and-drop way saturday, sundays and not-current-month days will be SKIPPED. All filled days will contain the same values</li>
+        <li>It is possible to set more hours-item per day</li>
+      </ul>
+    </dd>
+    <dt>PROMPT WINDOW :</dt>
+    <dd>This popup window will ask to fill the main information about a single work day. Basically the first two fields are required: 
+      <ul>
+        <li>The Project dropdown has to be filled with the project name to which you have worked</li>
+        <li>the Task dropdown allows to choose different options about the project. For example, "Office" or "Away", based on the workplace</li>
+      </ul>
+      The other fields are not required to be filled:
+      <ul>
+        <li>Hours slider is set to 8 as Default, it's the number of worked hours during the selected day</li>
+        <li>"Is extra hour" checkbox has to be checked in case of overtime work</li>
+        <li>Notes textbox can contain some annotation (for example, "Holiday justified by medical certificate) </li>
+      </ul>
+      [ABINSULA] Filling a leave day is slightly different:
+      <ul>
+        <li>the Project dropdown has to be set as ABI_H000 -- Holidays and leaves</li>
+        <li>the Task dropdown can contain different values:
+          <ul>
+            <li>"holiday", vacation day</li>
+            <li>"bank holiday", national vacation day</li>
+            <li>"leave", paid leave</li>
+            <li>"unpaid leave", leave hours not paid</li>
+          </ul>
+        </li>
+        <li>the Hours slider indicates how many vacation hours have been spent</li>
+        <li>Is extra hour is unuseful to this view</li>
+      </ul>
+        <li>Notes can contain some annotation, as usual</li>
+    </dd>
+    <dt>REMOVING DAYS/HOURS</dt>
+    <dd>To REMOVE the spent hours Click on the hours-item and select REMOVE</dd>
+  </dl>
+</div>

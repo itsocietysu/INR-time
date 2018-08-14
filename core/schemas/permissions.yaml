@@ -1,0 +1,618 @@
+# Permissions schema is defined in this way:
+#
+
+customer:
+  project manager:
+    get:
+      True
+  account:
+    get:
+      True
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True
+
+day:
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True    
+
+file_upload:
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True    
+
+file_download:
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True 
+      
+file_remove:
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True 
+
+user:
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True
+  employee:
+    get:
+      projections:
+        - salt
+        - password
+        - contract
+        - status
+      criteria:
+        type: object
+        properties:
+          _id:
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - _id
+        
+    update:
+        type: object
+        properties:
+          _id:
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - _id      
+  project manager:
+    get:
+      # Project manager can see every user record but the following
+      projections:
+        - salt
+        - password
+        - salary
+        - contract
+        - status
+    update:
+        type: object
+        properties:
+          _id:
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - _id      
+  account:
+    get:
+      projections:
+        - salt
+        - password
+        - salary
+        - contract
+        - status     
+    update:
+        type: object
+        properties:
+          _id:
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - _id        
+    
+search_trips:
+  administrator:
+    True
+  employee:
+    type: object
+    required: [ employee_id, user_id ]
+    properties:
+      employee_id:
+        type: string
+        pattern: '%%_id%%'        
+      user_id:
+        type: string
+        pattern: '%%_id%%'      
+  project manager:
+    oneOf:
+      - required: [ responsible_id ]
+        properties:
+          responsible_id:
+            type: string
+            pattern: '%%_id%%'          
+      - required: [ employee_id ]
+        properties:
+          employee_id:
+            type: string
+            pattern: '%%_id%%' 
+  account:
+    oneOf:
+      - required: [ responsible_id ]
+        properties:
+          responsible_id:
+            type: string
+            pattern: '%%_id%%'          
+      - required: [ employee_id ]
+        properties:
+          employee_id:
+            type: string
+            pattern: '%%_id%%' 
+
+    
+search_expences:
+  administrator:
+    True
+  employee:
+    type: object
+    required: [ employee_id, user_id ]
+    properties:
+      employee_id:
+        type: string
+        pattern: '%%_id%%'        
+      user_id:
+        type: string
+        pattern: '%%_id%%'      
+  project manager:
+    oneOf:
+      - required: [ responsible_id ]
+        properties:
+          responsible_id:
+            type: string
+            pattern: '%%_id%%'          
+      - required: [ employee_id ]
+        properties:
+          employee_id:
+            type: string
+            pattern: '%%_id%%' 
+
+  account:
+    oneOf:
+      - required: [ responsible_id ]
+        properties:
+          responsible_id:
+            type: string
+            pattern: '%%_id%%'          
+      - required: [ employee_id ]
+        properties:
+          employee_id:
+            type: string
+            pattern: '%%_id%%' 
+
+    
+search_days:
+    administrator:
+      True
+      
+    employee:
+        type: object
+        properties:
+          users.user_id: 
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - users.user_id
+                   
+    project manager:
+        type: object
+        properties:
+          users.user_id: 
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - users.user_id   
+
+    account:
+        type: object
+        properties:
+          users.user_id: 
+            type: string
+            pattern: '%%_id%%'
+        required: 
+          - users.user_id   
+
+push_days:
+    administrator:
+      True
+    employee:
+        type: object
+        properties:
+          users:
+            optional: True
+            type: array
+            items:
+              properties:
+                user_id:
+                  type: string
+                  pattern: '%%_id%%'
+    
+    project manager:
+        type: object
+        properties:
+          date:
+            type: string
+          users:
+            optional: True
+            type: array
+            items:
+              properties:
+                user_id:
+                  type: string
+                  pattern: '%%_id%%'
+                hours:
+                  optional: True
+                  type: array
+                  items: 
+                    properties:
+                      project:
+                        enum : '%%projects%%'
+
+    account:
+        type: object
+        properties:
+          date:
+            type: string
+          users:
+            optional: True
+            type: array
+            items:
+              properties:
+                user_id:
+                  type: string
+                  pattern: '%%_id%%'
+                hours:
+                  optional: True
+                  type: array
+                  items: 
+                    properties:
+                      project:
+                        enum : '%%projects%%'
+
+report_users_hours:
+    administrator:
+      True
+
+    project manager:
+        type: object
+        properties:
+          users.hours.project:
+            type: object
+            properties: 
+              '$in':
+                type: array
+                items:
+                  enum: '%%managed_projects%%'
+        required: 
+          - users.hours.project
+
+    account:
+        type: object
+        properties:
+          users.hours.project:
+            type: object
+            properties: 
+              '$in':
+                type: array
+                items:
+                  enum: '%%managed_projects%%'
+        required: 
+          - users.hours.project      
+  
+report_projects:
+    administrator:
+      True
+    project manager:
+        type: object
+        required : [ 'users.hours.project' ]
+        properties:
+          users.hours.project:
+            type: object
+            required: [ '$in' ]
+            properties: 
+              '$in':
+                type: array
+                items:
+                  enum: '%%managed_projects%%'
+
+    account:
+        type: object
+        required : [ 'users.hours.project' ]
+        properties:
+          users.hours.project:
+            type: object
+            required: [ '$in' ]
+            properties: 
+              '$in':
+                type: array
+                items:
+                  enum: '%%managed_projects%%'
+   
+                  
+project:
+  administrator:
+    get:
+      True
+    update:
+      True
+    add:
+      True
+    remove:
+      True
+
+  employee:
+    get:
+      criteria:
+        type: object
+        properties:
+          employees._id: 
+            type: string
+            pattern: '%%_id%%'
+        required:
+          - employees._id
+              
+  project manager:
+    get:
+      criteria:
+        oneOf:
+          - type: object
+            required: [ employees._id ]
+            properties:
+              employees._id:
+                type: string
+                pattern: '%%_id%%'
+          - type: object
+            required: [ responsibles._id ]
+            properties:
+              responsibles._id:
+                type: string
+                pattern: '%%_id%%'
+ 
+    update:
+      type: object
+      required: [ _id ]
+      properties:
+        _id:
+          type: string
+          enum: '%%managed_projects%%'
+        expences:
+          type: array
+          items:
+            required: [ status ]
+            properties:
+              status:
+                type: integer
+                minimum: '%%approval_flow%%'
+
+  account:
+    get:
+      criteria:
+        oneOf:
+          - type: object
+            required: [ employees._id ]
+            properties:
+              employees._id:
+                type: string
+                pattern: '%%_id%%'
+          - type: object
+            required: [ responsibles._id ]
+            properties:
+              responsibles._id:
+                type: string
+                pattern: '%%_id%%'
+ 
+    update:
+      type: object
+      required: [ _id ]
+      properties:
+        _id:
+          type: string
+          enum: '%%managed_projects%%'
+        expences:
+          type: array
+          items:
+            required: [ status ]
+            properties:
+              status:
+                type: integer
+                minimum: '%%approval_flow%%'
+
+push_trips:
+  administrator:
+    True
+
+  # employees._id is validated manually
+  employee:
+        type: object
+        required: [ trips ]
+        properties:
+          trips:
+            type: array
+            items:
+              type: object
+              required: [ user_id ]
+              properties:
+                user_id: 
+                  type: string
+                  pattern: '%%_id%%'
+                status:
+                  type: integer
+                  minimum: '%%draft_flow%%'
+                  maximum: '%%draft_flow%%'
+              
+  project manager:
+      type: object
+      properties:
+        _id:
+          type: string
+          enum: '%%projects%%'
+
+  account:
+      type: object
+      properties:
+        _id:
+          type: string
+          enum: '%%projects%%'          
+          
+push_expences:
+  administrator:
+    True
+  # employees._id is validated manually
+  employee:
+        type: object
+        required: [ expences ]
+        properties:
+          expences:
+            type: array
+            items:
+              type: object
+              required: [ user_id, status ]
+              properties:
+                user_id: 
+                  type: string
+                  pattern: '%%_id%%'
+                status:
+                  type: integer
+                  minimum: '%%draft_flow%%'
+                  maximum: '%%draft_flow%%'
+              
+  project manager:
+      type: object
+      properties:
+        _id:
+          type: string
+          enum: '%%projects%%'
+
+  account:
+      type: object
+      properties:
+        _id:
+          type: string
+          enum: '%%projects%%'          
+          
+search_tags:
+  administrator:
+    True
+  project manager:
+      True
+  account:
+      True
+
+approval:
+  administrator:
+    True
+  project manager:
+      type: object
+      required: [ project_id ]
+      properties:
+        project_id:
+          type: string
+          enum: '%%projects%%'
+  account:
+      type: object
+      required: [ project_id ]
+      properties:
+        project_id:
+          type: string
+          enum: '%%projects%%'
+  employee:
+      type: object
+      required: [ project_id, user_id ]
+      properties:
+        project_id:
+          type: string
+          enum: '%%projects%%'
+        user_id:
+          type: string
+          pattern: '%%_id%%'
+
+
+search_approvals:
+
+  administrator:
+    True
+    
+  project manager:
+    oneOf:
+      - type: object
+        required: [ projects_id, user_id ]
+        properties:
+          projects_id:
+            type: array
+            items:
+              type: string
+              enum: '%%employed_projects%%'
+          user_id:
+            type: string
+            pattern: '%%_id%%'
+      - type: object
+        required: [ projects_id ]
+        properties:
+          projects_id:
+            type: array
+            items:
+              type: string
+              enum: '%%managed_projects%%'
+
+  account:
+    oneOf:
+      - type: object
+        required: [ projects_id, user_id ]
+        properties:
+          projects_id:
+            type: array
+            items:
+              type: string
+              enum: '%%employed_projects%%'
+          user_id:
+            type: string
+            pattern: '%%_id%%'
+      - type: object
+        required: [ projects_id ]
+        properties:
+          projects_id:
+            type: array
+            items:
+              type: string
+              enum: '%%managed_projects%%'
+            
+  employee:
+      type: object
+      required: [ projects_id, user_id ]
+      properties:
+        projects_id:
+          type: array
+          items:
+            type: string
+            enum: '%%employed_projects%%'
+        user_id:
+          type: string
+          pattern: '%%_id%%'

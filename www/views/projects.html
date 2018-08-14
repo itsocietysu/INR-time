@@ -1,0 +1,338 @@
+<script src="/static/js/jquery.colorPicker.js"></script>
+<link href="/static/css/colorPicker.css" rel="stylesheet" media="screen">
+<script type="text/javascript">
+var i,htmltasks,validator,isupdate = false;
+$(document).ready(function() {
+  user.me(userdata);
+  htmltasks = "";
+  for(i=1; i < tasks.length; i++) {
+    htmltasks += "<option value='" + i + "'>" + tasks[i] + "</option>";
+  }
+  $("#projecttasks").html(htmltasks);
+  $(".datepicker").datepicker({format: "yyyy-mm-dd", autoclose:true});
+  $('.rapidsearch').rapidsearch();
+  $("#btnreset").click(function() {
+    resetProjectsForm(true);
+  });
+  $("#btnremove").click(function() {
+    project.remove($("#project_id").val(),resetProjectsForm);
+  });
+  var filter = { 'count': 30 };
+  tag.load(filter, generateTags, "taglist", true);
+  $("#projectForm").submit(function(event) {
+    event.preventDefault();
+    if(!validator.form())
+      return;
+    project.update(isupdate, "projectForm", resetProjectsForm);
+  });
+  $("#projectbkgcolor").colorPicker({pickerDefault: '#008000'});
+  $("#projecttxtcolor").colorPicker({pickerDefault: '#FFFFFF'});
+  labelPreview();
+  validator = $("#projectForm").validate({
+    rules: {
+      projectcustomer: {
+        required: true
+      },
+      projectname: {
+        required: true
+      },
+      projectdescription: {
+        required: true
+      },
+      projectcontact_person: {
+        required: true
+      },
+      projectstart: {
+        required: true,
+        dateISO: true
+      },
+      projectend: {
+        required: true,
+        dateISO: true
+      },
+      projecttasks: {
+        required: true
+      }
+    },
+    highlight: function (element) {
+      $(element).closest('.form-group').addClass('has-error');
+    },
+    unhighlight: function (element) {
+      $(element).closest('.form-group').removeClass('has-error');
+    }
+  });
+  $("#projectbkgcolor, #projecttxtcolor, #projectname").change(function () {
+    labelPreview();
+  });
+});
+
+function labelPreview() {
+  var text = $("#projectname").val();
+  if(text == "")
+    text = "Project Name";
+  $("#eventpreview").html(text);
+  $("#eventpreview").css('background-color', $("#projectbkgcolor").val());
+  $("#eventpreview").css('color', $("#projecttxtcolor").val());
+}
+
+function userdata(data) {
+  me = data;
+  resetProjectsForm();
+  loadCustomersList("projectcustomer");
+  loadUsersList("usersList");
+}
+
+function loadProjectsList(list) {
+  var filter;
+  if(me.group == "project manager" || me.group == "account")
+    filter = [{"responsibles._id": me._id},{name:1, description:1},{name:1}];
+  else
+    filter = [{},{name:1, description:1},{name:1}];
+  project.load(filter, loadProjects, list);
+}
+function loadCustomersList(list) {
+  var filter = [{},{name:1},{name:1}];
+  customer.load(filter, loadCustomers, list);
+}
+function loadUsersList(list) {
+  var filter = [{},{name:1,surname:1},{surname:1}];
+  user.load(filter, loadUsers, list);
+}
+
+function createFilterForm(container) {
+  var filter = [{},{},{name:1}];
+  $("#" + container + " input, #" + container + " select, #" + container + " textarea").each(function (){
+    var property = $(this).attr("id").substr(7);
+    if (property == "_id")
+      return;
+    filter[1][property] = 1;
+  });
+  filter[1].responsibles = 1;
+  filter[1].employees = 1;
+  return filter;
+}
+function resetProjectsForm(load) {
+  if(load == true) {} else {
+    loadProjectsList("projectsList");
+  }
+  isupdate = false;
+  $("#projectForm")[0].reset();
+  $("#project_id").val(0);
+  $("#btnremove").addClass("hidden");
+  $("#projectsList li, #taglist li, #usersList li").removeClass("active");
+  $("#btnsubmit").html("<span class='glyphicon glyphicon-plus'></span> Add");
+  var $target = $("#projectbkgcolor").parent().find('span:first');
+  $target.css('background-color', $("#projectbkgcolor").val());
+  $target = $("#projecttxtcolor").parent().find('span:first');
+  $target.css('background-color', $("#projecttxtcolor").val());
+  labelPreview();
+}
+function loadUsers(data, args) {
+  var container = args[0];
+  var i;
+  var htmllist = "";
+  for(i=0;i < data.length; i++) {
+    htmllist += "<li id='" + data[i]._id + "'class='list-group-item'><span class='glyphicon glyphicon-user'></span> <span class='user'>" + data[i].surname + " " + data[i].name + "</span><div class='btn-group' data-toggle='buttons'><label class='btn btn-default btn-xs active'><input type='checkbox'>Employee</label><label class='btn btn-default btn-xs'><input type='checkbox'>Project Manager</label><label class='btn btn-default btn-xs'><input type='checkbox'>Account</label></div></li>";
+  }
+  $("#" + container).html(htmllist);
+  $("#" + container + " .list-group-item span.user").click(function() {
+    $(this).parent().find(".btn-default").removeClass("active");
+    $(this).parent().find(".btn-default:contains('Employee')").addClass("active");
+    $(this).parent().toggleClass("active");
+  });
+}
+
+function loadProjects(data, args) {
+  var i, container = args[0];
+  var htmllist = "";
+  for(i=0;i < data.length; i++) {
+    htmllist += "<li id='" + data[i]._id + "'class='list-group-item'><span class='glyphicon glyphicon-edit'></span> " + data[i].name + " -- " + data[i].description.substr(0,20) + "</li>";
+  }
+  //add line for new project
+  if(me.group == "administrator")
+    htmllist += "<li class='list-group-item'><span class='glyphicon glyphicon-plus'></span> New Project ...</li>";
+  $("#" + container).html(htmllist);
+  $('.rapidsearch').rapidsearch('update');
+  $("#" + container + " .list-group-item").click(function() {
+    resetProjectsForm(true);
+    $(this).addClass("active");
+    if(this.id == "")
+      return;
+    isupdate = true;
+    var filter = createFilterForm("projectForm");
+    filter[0]._id = this.id;
+    if(me.group == "project manager") {
+      filter[0]["responsibles._id"] = me._id;
+    }
+    project.loadSingle(filter,loadProjectDetails);
+  });
+}
+
+function loadProjectDetails(data) {
+  for(var key in data[0]) {
+    $("#project" + key).val(data[0][key]);
+  }
+  if(data[0].tags)
+    setActive(data[0], "tags", "taglist");
+  setActive(data[0], "employees", "");
+  if(data[0].responsibles)
+    setActive(data[0], "responsibles", "");
+  $("#projecttags").val("");
+  $("#projectbkgcolor").prev("span").css("background-color",$("#projectbkgcolor").val());
+  $("#projecttxtcolor").prev("span").css("background-color",$("#projecttxtcolor").val());
+  labelPreview();
+  $(".btn-danger").removeClass("hidden");
+  $("#btnsubmit").html("<span class='glyphicon glyphicon-edit'></span> Update");
+}
+
+function setActive(records, field, container) {
+  var i;
+  for (i = 0; i < records[field].length; i++) {
+    if(field == "tags")
+      $('#' + container + ' li:contains("' + records[field][i] + '")').addClass("active")
+    else if (field == "employees") {
+      $("#" + records[field][i]._id + " .btn-default").removeClass("active");
+      $("#" + records[field][i]._id + " .btn-default:contains('Employee')").addClass("active");
+      $("#" + records[field][i]._id).addClass("active");
+    } else {
+      var role = records[field][i].role;
+      if($("#" + records[field][i]._id).hasClass("active") == false) {
+        $("#" + records[field][i]._id).addClass("active");
+        $("#" + records[field][i]._id + " .btn-default").removeClass("active");
+      }
+      if(role == "account") {
+        $("#" + records[field][i]._id + " .btn-default:contains('Account')").addClass("active");
+      } else {
+        $("#" + records[field][i]._id + " .btn-default:contains('Project Manager')").addClass("active");
+      }
+    }
+  }
+}
+
+function loadCustomers(data, container) {
+  var i;
+  var htmlselect = "<option value=''></option>";
+  for(i=0;i < data.length; i++) {
+    htmlselect += "<option value='" + data[i]._id + "'>" + data[i].name + "</option>";
+  }
+  $("#" + container).html(htmlselect);
+}
+
+</script>
+<h2>Projects Management</h2>
+<div class="row">
+  <div class="col-lg-3">
+    <h3>Current projects list</h3>
+    <div class="input-group">
+      <span class="input-group-addon glyphicon glyphicon-search"></span>
+      <input type="text" class="form-control rapidsearch" placeholder="Rapid Search" id="txtprojects">
+    </div>
+    <p></p>
+    <ul class="list-group" id="projectsList"></ul>
+  </div>
+  <div class="col-lg-4">
+    <h3>Project Details</h3>
+    <form class="form-horizontal" role="form" id="projectForm" method="post" action="/index/projects">
+<input type="hidden" id="project_id" value="0">
+<div class="form-group">
+    <label for="projectcustomer" class="col-lg-4 control-label">Customer</label>
+    <div class="col-lg-8">
+      <select class="form-control" id="projectcustomer" name="projectcustomer">
+      </select>
+    </div>
+  </div>
+<div class="form-group">
+    <label for="projecttags" class="col-lg-4 control-label">Tags</label>
+    <div class="col-lg-8">
+      <ul id="taglist"></ul>
+    </div>
+  </div>
+<div class="form-group">
+    <label for="projectname" class="col-lg-4 control-label">Name</label>
+    <div class="col-lg-8">
+      <input type="text" class="form-control" id="projectname" name="projectname" placeholder="Name">
+    </div>
+  </div>
+<div class="form-group">
+    <label for="projectname" class="col-lg-4 control-label">Description</label>
+    <div class="col-lg-8">
+      <textarea class="form-control" id="projectdescription" name="projectdescription" rows="3" placeholder="Description"></textarea>
+    </div>
+  </div>
+<div class="form-group">
+    <label for="projectcontact_person" class="col-lg-4 control-label">Contact Person</label>
+    <div class="col-lg-8">
+      <input type="text" class="form-control" id="projectcontact_person" name="projectcontact_person" placeholder="Contact Person">
+    </div>
+</div>
+<div class="form-group">
+  <label for="projectstart" class="col-lg-4 control-label">Date start</label>
+  <div class="col-lg-8">
+    <div class="input-group">
+      <span class="input-group-addon glyphicon glyphicon-calendar"></span>
+      <input type="text" class="form-control datepicker" id="projectstart" name="projectstart" placeholder="2013-01-01">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="projectend" class="col-lg-4 control-label">Date end</label>
+  <div class="col-lg-8">
+    <div class="input-group">
+      <span class="input-group-addon glyphicon glyphicon-calendar"></span>
+      <input type="text" class="form-control datepicker" id="projectend" name="projectend" placeholder="2020-12-31">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="projectbkgcolor" class="col-lg-4 control-label">Background Color</label>
+  <div class="col-lg-8">
+    <div class="input-group">
+      <input type="text" class="form-control color" id="projectbkgcolor" value="#008000">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="projecttxtcolor" class="col-lg-4 control-label">Text Color</label>
+  <div class="col-lg-8">
+    <div class="input-group">
+      <input type="text" class="form-control color" id="projecttxtcolor" value="#FFFFFF">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label class="col-lg-4 control-label">Label preview</label>
+  <div class="col-lg-8">
+    <div class="input-group">
+      <span id="eventpreview"></span>
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="projecttasks" class="col-lg-4 control-label">Tasks</label>
+  <div class="col-lg-8">
+    <select multiple class="form-control" id="projecttasks" name="projecttasks">
+    </select>
+  </div>
+</div>
+<div class="form-group">
+    <div class="col-lg-offset-4 col-lg-8">
+      <button type="submit" class="btn btn-primary" id="btnsubmit"><span class="glyphicon glyphicon-plus"></span> Add</button>
+      <button type="reset" class="btn" id="btnreset"> Reset</button>
+      <button type="button" class="btn btn-danger hidden" id="btnremove"><span class="glyphicon glyphicon-trash"></span> Remove</button>
+    </div>
+</div>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <h3>Team components</h3>
+    <form class="form-horizontal" role="form" id="usersForm" method="post" action="/index/projects">
+    <p>Select responsibles and people involved in the project.</p>
+    <div class="input-group">
+      <span class="input-group-addon glyphicon glyphicon-search"></span>
+      <input type="text" class="form-control rapidsearch" placeholder="Rapid Search" id="txtusers">
+    </div>
+<p></p>
+    <ul class="list-group" id="usersList"></ul>
+  </form>
+  </div>
+</div>
